@@ -20,12 +20,15 @@ const int buttonPin = PC15;    // пін для кнопки
 
 const uint8_t NUM_SENSORS = 6;
 // Змінні для регулювання швидкості моторів
+
+//  HERE SPEEDS ???
 int motorSpeed = 80;  // Початкова швидкість (максимальна)
 int motorSpeedback = 200;  // Початкова швидкість (максимальна)
 int motorSpeedrot = 100;  // Початкова швидкість (максимальна)
 int speedRotate = 100;
 int attackSpeed = 140;
 int SpeedUP = 80;
+//  END
 bool lastButtonState = false; // попередній стан кнопки
 bool programRunning = false;  // стан програми (запущено чи ні)
 bool buttonState = false;     // поточний стан кнопки
@@ -53,34 +56,36 @@ void stopMotors() {
   analogWrite(motorA2, 0);  // Зупинка мотора 1
   analogWrite(motorB1, 0);  // Зупинка мотора 2
   analogWrite(motorB2, 0);  // Зупинка мотора 2
-}
+} 
 void attack() {
-  analogWrite(motorA1, attackSpeed);  // Зупинка мотора 1
-  analogWrite(motorA2, 0);  // Зупинка мотора 1
-  analogWrite(motorB1, attackSpeed);  // Зупинка мотора 2
-  analogWrite(motorB2, 0);  // Зупинка мотора 2
+  analogWrite(motorA1, attackSpeed);  // Швидкість на мотор 1
+  analogWrite(motorA2, 0);  // Відключення протилежного напрямку на моторі 1
+  analogWrite(motorB1, attackSpeed);  // Швидкість на мотор 2
+  analogWrite(motorB2, 0);  // Відключення протилежного напрямку на моторі 2
 }
 
+//  HERE  ROTATE WHAT??
 void rotate() {
-  analogWrite(motorA1, 0);  // Зупинка мотора 1
-  analogWrite(motorA2, motorSpeedrot);  // Зупинка мотора 1
-  analogWrite(motorB1, motorSpeedrot);  // Зупинка мотора 2
-  analogWrite(motorB2, 0);  // Зупинка мотора 2
+  analogWrite(motorA1, 0);  // Відключення протилежного напрямку на моторі 1
+  analogWrite(motorA2, motorSpeedrot);  // Швидкість на мотор 1
+  analogWrite(motorB1, motorSpeedrot);  // Швидкість на мотор 2
+  analogWrite(motorB2, 0);  // Відключення протилежного напрямку на моторі 2
 }
+//  END
 
 
 void rotateR() {
-  analogWrite(motorA1, 0);  // Зупинка мотора 1
-  analogWrite(motorA2, speedRotate);  // Зупинка мотора 1
-  analogWrite(motorB1, speedRotate);  // Зупинка мотора 2
-  analogWrite(motorB2, 0);  // Зупинка мотора 2
+  analogWrite(motorA1, 0);  // Відключення протилежного напрямку на моторі 1
+  analogWrite(motorA2, speedRotate);  // Швидкість на мотор 1
+  analogWrite(motorB1, speedRotate);  // Швидкість на мотор 2
+  analogWrite(motorB2, 0);  // Відключення протилежного напрямку на моторі 2
 }
 
 void rotateL() {
-  analogWrite(motorA1, speedRotate);  // Зупинка мотора 1
-  analogWrite(motorA2, 0);  // Зупинка мотора 1
-  analogWrite(motorB1, 0);  // Зупинка мотора 2
-  analogWrite(motorB2, speedRotate);  // Зупинка мотора 2
+  analogWrite(motorA1, speedRotate);  // Швидкість на мотор 1
+  analogWrite(motorA2, 0);  // Відключення протилежного напрямку на моторі 1
+  analogWrite(motorB1, 0);  // Відключення протилежного напрямку на моторі 2
+  analogWrite(motorB2, speedRotate);  // Швидкість на мотор 2
 }
 
 // Функція для руху назад з регулюванням швидкості
@@ -91,7 +96,7 @@ void moveBackward() {
   analogWrite(motorB2, motorSpeedback); // Швидкість на мотор 2
 }
 
-
+//  HERE WHAATS BT AND ADDRESS
 void printAddress(uint8_t address)  {
   BTSerial.print("0x");
 	if (address<0x10) {
@@ -99,6 +104,7 @@ void printAddress(uint8_t address)  {
 	}
 	BTSerial.println(address,HEX);
 }
+//  END
 
 
 void setup() {
@@ -114,21 +120,30 @@ void setup() {
   Serial.begin(115200);  // Ініціалізація серійного зв'язку для FT232RL
   BTSerial.begin(9600);
   Wire.begin();
+  //  HERE WHY 400KHZ
   Wire.setClock(400000);
-  Serial.println("Ініціалізація мультиплексора TCA9548A...");
+  //  END
+  Serial.println("setting up...");
+  //Serial.println("Ініціалізація мультиплексора TCA9548A...");
   //tca.address(TCA9548A_I2C_ADDRESS);
 
   // Ініціалізація сенсорів на каналах 0, 1, 2
+
+  // HERE WHY 1 NOT 0
   for (uint8_t channel = 1; channel < NUM_SENSORS; channel++) {
     BTSerial.print("Сканування сенсора на каналі ");
     BTSerial.print(channel);
     BTSerial.print("... ");
 
-    distances[channel] = 500;
+    distances[channel] = 500; //pseudo number, gonna change later
 
     BTSerial.print(tca.selectChannel(channel));
 
-    if (tca.selectChannel(channel) == 0) {
+    // create a var instead of calling the function twice
+
+    if (tca.selectChannel(channel) == 0) { // channel selected successfully
+       VL53L0X_RangingMeasurementData_t measure;
+       lox.rangingTest(&measure, false);
       if (!lox.begin()) {
         BTSerial.println("❌ Не знайдено VL53L0X");
         Serial.println("❌ Не знайдено VL53L0X");
@@ -236,19 +251,26 @@ void loop() {
       distances[channel] = 0;
       sensorStatus[channel] = false;
     }
-  }  if (distances[1] == 0){
-        distances[1] = 500;
-      }
-      if (distances[5] == 0){
-        distances[5] = 500;
-      }
-      if (distances[2] == 0){
-        distances[2] = 500;
-      }
-      if (distances[4] == 0){
-        distances[4] = 500;
-      }if (distances[3]  == 0){
-        distances[3] = 500;
-      }
-    }
   }
+  if (distances[1] == 0)
+  {
+    distances[1] = 500;
+  }
+  if (distances[5] == 0)
+  {
+    distances[5] = 500;
+  }
+  if (distances[2] == 0)
+  {
+    distances[2] = 500;
+  }
+  if (distances[4] == 0)
+  {
+    distances[4] = 500;
+  }
+  if (distances[3] == 0)
+  {
+    distances[3] = 500;
+  }
+  }
+}
