@@ -13,6 +13,7 @@ const int motorA2 = PB14;     // пін для мотора 1
 const int motorB1 = PA6;      // пін для мотора 2
 const int motorB2 = PA5;      // пін для мотора 2
 const int lineSensor1 = PA15; // пін для датчика лінії 1
+//idk which one of these is left and which is right
 const int lineSensor2 = PB3;  // пін для датчика лінії 2
 const int buttonPin = PC15;   // пін для кнопки
 
@@ -29,7 +30,7 @@ bool isProgramRunning = false;  // стан програми (запущено �
 bool buttonState = false;     // поточний стан кнопки
 
 unsigned long lastRead = 0;
-uint16_t distances[NUM_SENSORS];
+uint16_t distances[NUM_SENSORS]; // start from 1 not 0
 bool sensorStatus[NUM_SENSORS];
 
 
@@ -145,6 +146,7 @@ void setup()
 
 void loop()
 {
+  //TODO add debugs
   //TODO maybe for optimization do it like an event or smth, look it up
   buttonState = digitalRead(buttonPin);
 
@@ -153,6 +155,7 @@ void loop()
     delay(50); // Затримка для антидребезгу кнопки
     if (!isProgramRunning)
     {
+      delay(4950); // Затримка для входу в ринг, 5 секунд
       isProgramRunning = true; //starting the program
     }
     else
@@ -169,27 +172,25 @@ void loop()
     /* LOGIC
     so, if one of line trackers detects a WHITE line, check for which one, left or right(probably 1 is left 2 is right)
     if left, rotate right, if right, rotate left
-    if on black*/
+    if on black, check all sensors probably in no order, but this order could be optimal: middle, right left, right side left side
+    and record all the values into distances array
+    if else hell for now, later make a finite state machine
+    placeholders for distances now
+    if only middle detect enemy - ram at full speed; if middle and right - maybe left motor full, right motor a bit slower for turning;
+    if middle left - the opposite; if right or right side or left or left side, jst rotate in place towards the enemy;
+    if nothing - rotate in place to search for the enemy
 
-    //read line sensors, not sure, low is white, high is black
+    TODO think about logic, like if the car is in the left of the ring and cant see the enemy, rotate to right since its mora probable that the enemy is
+    in the remaining part of ring, stuff like that.
+    */
+
+
+    // black is high, white is low
     int sensor1 = digitalRead(lineSensor1);
     int sensor2 = digitalRead(lineSensor2);
-    // Якщо хоча б один датчик виявляє білу лінію
-    if (sensor1 == LOW && sensor2 == LOW)
+
+    if (sensor1 == HIGH || sensor2 == HIGH) // if both sensors are on ring(the ring should be black)
     {
-      // Білу лінію виявлено
-      BTSerial.print("   ");
-      BTSerial.print(distances[5]);
-      BTSerial.print("   ");
-      BTSerial.print(distances[4]);
-      BTSerial.print("   ");
-      BTSerial.print(distances[3]);
-      BTSerial.print("   ");
-      BTSerial.print(distances[2]);
-      BTSerial.print("  ");
-      BTSerial.println(distances[1]);
-      //  BTSerial.print("  Лівій фронтальний: ");
-      //  if (true) Serial.print(" ");
       if (distances[3] < 90)
       {
         attack();
@@ -225,13 +226,20 @@ void loop()
         BTSerial.println("Рух Вперед");
       }
     }
-    else
+    else //if someone detects white(edge of the ring), we need to rotate to the opposite side to get back on the ring
     {
-      // Інакше, продовжуємо рухатися вперед
-      moveBackward();
-      delay(200);
-      rotate();
-      delay(100);
+      if (sensor1 == LOW)
+      {
+        //rotate in place to the right
+      }
+      else if (sensor2 == LOW)
+      {
+        //rotate in place to the left
+      }
+      else //both sensors on white, 
+      {
+        //idk
+      }
     }
     for (uint8_t channel = 1; channel < NUM_SENSORS; channel++)
     {
@@ -277,4 +285,5 @@ void loop()
       distances[3] = 500;
     }
   }
+  //maybe delay at the end of loop for smoother movement
 }
