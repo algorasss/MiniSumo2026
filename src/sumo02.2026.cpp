@@ -122,7 +122,7 @@ void setup()
     Serial.print("scanning sensor on channel ");
     Serial.print(channel);
     Serial.println("... ");
-    //distances[channel] = 500; // pseudo number, gonna change later
+    distances[channel] = 1000; // pseudo number init
     bool isChannelSelected = (tca.selectChannel(channel) == 0);
 
     if (isChannelSelected) // channel selected successfully
@@ -130,10 +130,11 @@ void setup()
       Serial.println("OK channel selected");
       if (sensor.begin())
       {
-        Serial.println("OK sensor found");
+        Serial.println("OK sensor found");  
         sensor.configSensor(Adafruit_VL53L0X::VL53L0X_SENSE_HIGH_SPEED);
         VL53L0X_RangingMeasurementData_t measure;
         sensor.rangingTest(&measure, true);
+        sensor.startRangeContinuous();
       }
       else
       {
@@ -155,11 +156,14 @@ void loop()
     delay(50); // Затримка для антидребезгу кнопки
     if (!isProgramRunning)
     {
+      Serial.println("starting program...");
       delay(4950); // Затримка для входу в ринг, 5 секунд
+      Serial.println("START");
       isProgramRunning = true; //starting the program
     }
     else
     {
+      Serial.println("STOP");
       isProgramRunning = false; // stopping the program
       stopMotors();
     }
@@ -226,8 +230,10 @@ void loop()
         BTSerial.println("Рух Вперед");
       }
     }
+
     else //if someone detects white(edge of the ring), we need to rotate to the opposite side to get back on the ring
     {
+      //TODO check side sensors and rotate in the right direction
       if (sensor1 == LOW)
       {
         //rotate in place to the right
@@ -241,49 +247,26 @@ void loop()
         //idk
       }
     }
+
+
     for (uint8_t channel = 1; channel < NUM_SENSORS; channel++)
     {
-      // Вибір каналу
-      if (tca.selectChannel(channel) != 0)
+      bool isChannelSelected = (tca.selectChannel(channel) == 0);
+      if (isChannelSelected)
       {
-        distances[channel] = 0;
-        sensorStatus[channel] = false;
-        continue;
-      }
-      VL53L0X_RangingMeasurementData_t measure;
-      sensor.rangingTest(&measure, false);
-
-      if (measure.RangeStatus != 4)
-      {
-        distances[channel] = measure.RangeMilliMeter;
-        sensorStatus[channel] = true;
+        uint16_t measurement = sensor.readRangeResult(); // maybe use with isRangeComplete()
+        distances[channel] = measurement;
+        if(measurement == 0)
+        {
+          distances[channel] = 1000; //if the sensor cant see, set distance to 500 insted of 0
+        }
       }
       else
       {
-        distances[channel] = 0;
-        sensorStatus[channel] = false;
+        Serial.print("ERROR selecting channel ");
+        Serial.println(channel);
       }
     }
-    if (distances[1] == 0)
-    {
-      distances[1] = 500;
-    }
-    if (distances[5] == 0)
-    {
-      distances[5] = 500;
-    }
-    if (distances[2] == 0)
-    {
-      distances[2] = 500;
-    }
-    if (distances[4] == 0)
-    {
-      distances[4] = 500;
-    }
-    if (distances[3] == 0)
-    {
-      distances[3] = 500;
-    }
+    //maybe delay at the end of loop for smoother movement
   }
-  //maybe delay at the end of loop for smoother movement
 }
