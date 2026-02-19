@@ -17,6 +17,11 @@ const int motorB2 = PA5;      // пін для лівого мотора наз�
 const int lineSensor1 = PA15; //
 const int lineSensor2 = PB3;  //
 
+const int buttonPin = PC15;
+
+bool buttonState = false;
+bool lastButtonState = false;
+
 uint16_t distances[NUM_SENSORS]; // start from 1 not 0
 
 int timesRan = 0;
@@ -91,73 +96,45 @@ void TestMotor()
 
 void TestSensors()
 {
-    for (uint8_t channel = 1; channel < NUM_SENSORS; channel++) // checking sensors on all channels of the multiplexer
+    for (uint8_t channel = 1; channel < NUM_SENSORS + 1; channel++) // checking sensors on all channels of the multiplexer
     {
-        bool isChannelSelected = (tca.selectChannel(channel) == 0);
 
-        if (isChannelSelected) // channel selected successfully
-        {
-            if (sensor.begin())
-            {
-                sensor.configSensor(Adafruit_VL53L0X::VL53L0X_SENSE_HIGH_SPEED);
-                VL53L0X_RangingMeasurementData_t measure;
-                sensor.rangingTest(&measure, true);
-                if (measure.RangeMilliMeter < 50)
-                {
-                    SerialUSB.print("range: ");
-                    SerialUSB.print(measure.RangeMilliMeter);
-                    SerialUSB.print(" max range: ");
-                    SerialUSB.print(measure.RangeDMaxMilliMeter);
-                    SerialUSB.print(" fractional range: ");
-                    SerialUSB.print(measure.RangeFractionalPart);
-                    SerialUSB.print(" time stamp: ");
-                    SerialUSB.println(measure.TimeStamp);
-                }
-            }
-            else
-            {
-                SerialUSB.println("ERROR finding sensor");
-            }
-        }
-        else SerialUSB.println("ERROR selecting channel");
+        SerialUSB.print(channel);
+
+        tca.selectChannel(channel);
+        delay(2);
+        VL53L0X_RangingMeasurementData_t measure;
+        sensor.rangingTest(&measure, true);
+        // if (measure.RangeMilliMeter < 50)
+        // {
+            SerialUSB.print(" range: ");
+            SerialUSB.print(measure.RangeMilliMeter);
+            SerialUSB.print(" max range: ");
+            SerialUSB.print(measure.RangeDMaxMilliMeter);
+            SerialUSB.print(" fractional range: ");
+            SerialUSB.print(measure.RangeFractionalPart);
+            SerialUSB.print(" time stamp: ");
+            SerialUSB.println(measure.TimeStamp);
+        //}
     }
 }
 void InitSensors()
 {
-    for (uint8_t channel = 1; channel < NUM_SENSORS; channel++) // checking sensors on all channels of the multiplexer
+    for (uint8_t channel = 1; channel < NUM_SENSORS + 1; channel++) // checking sensors on all channels of the multiplexer
     {
-        SerialUSB.print("scanning sensor on channel ");
+        SerialUSB.print("SETUP sensor on channel ");
         SerialUSB.print(channel);
         SerialUSB.println("... ");
-        distances[channel] = 1000; // pseudo number init
-        bool isChannelSelected = (tca.selectChannel(channel) == 0);
-
-        if (isChannelSelected) // channel selected successfully
+        tca.selectChannel(channel);
+        delay(2);
+        if (sensor.begin())
         {
-            SerialUSB.println("OK channel selected");
-            if (sensor.begin())
-            {
-                sensor.configSensor(Adafruit_VL53L0X::VL53L0X_SENSE_HIGH_SPEED);
-                VL53L0X_RangingMeasurementData_t measure;
-                sensor.rangingTest(&measure, true);
-                SerialUSB.print("range: ");
-                SerialUSB.print(measure.RangeMilliMeter);
-                SerialUSB.print(" max range: ");
-                SerialUSB.print(measure.RangeDMaxMilliMeter);
-                SerialUSB.print(" fractional range: ");
-                SerialUSB.print(measure.RangeFractionalPart);
-                SerialUSB.print(" time stamp: ");
-                SerialUSB.println(measure.TimeStamp);
-                
-                //sensor.startRangeContinuous();
-            }
-            else
-            {
-                SerialUSB.println("ERROR finding sensor");
-            }
+            SerialUSB.println("s OK");
         }
         else
-            SerialUSB.println("ERROR selecting channel");
+        {
+            SerialUSB.println("s FAILED");
+        }
     }
 }
 
@@ -184,10 +161,10 @@ void TestLineSensors(bool isFirst)
     }
     else
     {
-        int sensor1 = digitalRead(lineSensor1);
-        SerialUSB.print("sensor 1 value: ");
-        SerialUSB.println(sensor1);
-        if(sensor1 == 1)
+        int sensor2 = digitalRead(lineSensor2);
+        SerialUSB.print("sensor 2 value: ");
+        SerialUSB.println(sensor2);
+        if(sensor2 == 1)
         {
             SerialUSB.println("WWWW");
         }
@@ -204,16 +181,31 @@ void setup()
     pinMode(lineSensor1, INPUT);
     pinMode(lineSensor2, INPUT);
 
-    //Wire.begin();
-    //Wire.setClock(400000);
+    pinMode(buttonPin, INPUT_PULLUP);
 
     SerialUSB.begin(115200);
     SerialUSB.println("setting up...");
 
-    //InitSensors();
+    Wire.begin();
+    Wire.setClock(400000);
+
+    InitSensors();
 }
 void loop()
 {
+    buttonState = digitalRead(buttonPin);
+    if (buttonState == LOW && lastButtonState == HIGH)
+    {
+        delay(50);
+        SerialUSB.println("Re-initializing sensors...");
+        Wire.end();
+        delay(100);
+        Wire.begin();
+        Wire.setClock(400000);
+        InitSensors();
+        //delay(1000);
+    }
+    lastButtonState = buttonState;
     //test motors code
     // if(timesRan < 5)
     // {
@@ -222,5 +214,9 @@ void loop()
     // }
 
     //test line sensors
-    TestLineSensors(false); // test first line sensor
+    //TestLineSensors(false); //line sensor
+
+    //test enemy sensors
+    TestSensors();
 }
+//make program start on button click, if button is clicked while code is running, switch to the next mode, if it is held for 2 second, stop
