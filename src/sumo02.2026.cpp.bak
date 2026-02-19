@@ -8,6 +8,7 @@ HardwareSerial BTSerial(2);
 ClosedCube::Wired::TCA9548A tca(TCA9548A_I2C_ADDRESS); //init the multiplexer right away
 Adafruit_VL53L0X sensor = Adafruit_VL53L0X();
 
+//TODO rename constants to caps
 const int motorA1 = PB13;     // пін для мотора 1
 const int motorA2 = PB14;     // пін для мотора 1
 const int motorB1 = PA6;      // пін для мотора 2
@@ -151,6 +152,7 @@ void loop()
   //TODO maybe for optimization do it like an event or smth, look it up
   buttonState = digitalRead(buttonPin);
 
+  //TODO maybe separate function for button handling, but for now its ok
   if (buttonState == LOW && lastButtonState == HIGH) //if button was just pressed (active is low)
   {
     delay(50); // Затримка для антидребезгу кнопки
@@ -248,7 +250,7 @@ void loop()
       }
     }
 
-
+//TODO make a separate function
     for (uint8_t channel = 1; channel < NUM_SENSORS; channel++)
     {
       bool isChannelSelected = (tca.selectChannel(channel) == 0);
