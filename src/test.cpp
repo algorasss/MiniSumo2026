@@ -8,7 +8,7 @@ HardwareSerial BTSerial(2);
 ClosedCube::Wired::TCA9548A tca; // init the multiplexer right away
 Adafruit_VL53L0X sensor = Adafruit_VL53L0X();
 
-const uint8_t NUM_SENSORS = 8; // we have 5 sensors
+const uint8_t NUM_SENSORS = 4; // we have 4 sensors
 
 const int motorA1 = PB13; // пін для правого мотора вперед
 const int motorA2 = PB14; // пін для правого мотора назад
@@ -23,7 +23,7 @@ const int buttonPin = PC15;
 bool buttonState = false;
 bool lastButtonState = false;
 
-uint16_t distances[NUM_SENSORS]; // start from 1 not 0
+uint16_t distances[NUM_SENSORS];
 
 int timesRan = 0;
 
@@ -103,108 +103,109 @@ void TestMotor()
 
 void TestSensors()
 {
-}
-void InitSensorsTemp()
-{
-    tca.address(TCA9548A_I2C_ADDRESS);
-
-    uint8_t returnCode = 0;
-    uint8_t address;
-    uint8_t numberOfDevices;
-
-    for (uint8_t channel = 0; channel < TCA9548A_MAX_CHANNELS; channel++)
+    for (uint8_t channel = 0; channel < NUM_SENSORS; channel++)
     {
-        BTSerial.print("Scanning channel #");
-        BTSerial.print(channel);
-        BTSerial.println("...");
-
-        returnCode = tca.selectChannel(channel);
-        numberOfDevices = 0;
-
-        if (returnCode == 0)
+        if (tca.selectChannel(channel) != 0)
         {
-            // for (address = 0x01; address < 0x7F; address++)
-            // {
-                Wire.beginTransmission(address);
-                Wire.write(1 << channel);
-                returnCode = Wire.endTransmission();
-                BTSerial.println(returnCode);
-                if (returnCode == 0)
-                {
-                    BTSerial.print("I2C device = ");
-                    printAddress(address);
+            distances[channel] = 1000;
+            BTSerial.print("ERROR selecting channel ");
+            BTSerial.println(channel);
+            continue;
+        }
 
-                    numberOfDevices++;
-                }
-                else if (returnCode == 4)
-                {
-                    BTSerial.print("Unknown error at ");
-                    printAddress(address);
-                }
-                else
-                {
-                    BTSerial.print(returnCode);
-                    BTSerial.println("Fail");
-                }
-                if (numberOfDevices == 0)
-                    BTSerial.println("No I2C devices found\n");
-                else
-                {
-                    BTSerial.print("Error scan channel (Code:");
-                    BTSerial.print(returnCode);
-                    BTSerial.println(")");
-                }
-            //}
-            BTSerial.println("where am i");
-        } else
+        VL53L0X_RangingMeasurementData_t measure;
+        sensor.rangingTest(&measure, false);
+
+        if (measure.RangeStatus == 0)
         {
-            BTSerial.print("Error scan channel (Code:");
-            BTSerial.print(returnCode);
-            BTSerial.println(")");
+            distances[channel] = measure.RangeMilliMeter;
+            BTSerial.print("Distance on sensor ");
+            BTSerial.print(channel);
+            BTSerial.print(": ");
+            BTSerial.println(measure.RangeMilliMeter);
+        }
+        else
+        {
+            distances[channel] = 1000;
+            BTSerial.print("Sensor error ");
+            BTSerial.println(measure.RangeStatus);
         }
     }
 }
-void InitSensors()
+void InitSensorsAlt()
 {
-    uint8_t returnCode = 0;
-    uint8_t numberOfDevices;
+    tca.address(TCA9548A_I2C_ADDRESS);
 
     for (uint8_t channel = 0; channel < NUM_SENSORS; channel++)
     {
         BTSerial.print("Scanning channel #");
-        BTSerial.print(channel);
-        BTSerial.println("...");
+        BTSerial.println(channel);
 
-        for(uint8_t address = 0x01; address < 0x7F; address++)
+        uint8_t returnCode = tca.selectChannel(channel);
+        if (returnCode != 0)
         {
-            BTSerial.print("Trying address: ");
-            BTSerial.println(address, HEX);
-            Wire.beginTransmission(address);
-            Wire.write(1 << channel);
-            returnCode = Wire.endTransmission();
+            BTSerial.print("ERROR selecting channel, code: ");
             BTSerial.println(returnCode);
+            continue;
+        }
+
+        uint8_t numberOfDevices = 0;
+        for (uint8_t address = 0x01; address < 0x7F; address++)
+        {
+            Wire.beginTransmission(address);
+            returnCode = Wire.endTransmission();
+            if (returnCode == 0)
+            {
+                BTSerial.print("Found device at 0x");
+                BTSerial.println(address, HEX);
+                numberOfDevices++;
+            }
+        }
+
+        if (numberOfDevices == 0)
+            BTSerial.println("No I2C devices found on this channel");
+    }
+}
+void InitSensors()
+{
+    tca.address(TCA9548A_I2C_ADDRESS);
+    for (uint8_t channel = 0; channel < NUM_SENSORS; channel++)
+    {
+        BTSerial.print("Сканування сенсора на каналі ");
+        BTSerial.print(channel);
+        BTSerial.print("... ");
+
+        if (tca.selectChannel(channel) == 0)
+        {
+            BTSerial.println("канал вибрано, ініціалізація сенсора...");
+            if (!sensor.begin())
+            {
+                BTSerial.println("❌ Не знайдено VL53L0X");
+            }
+            else
+            {
+                BTSerial.println("✅ Сенсор знайдено.");
+            }
+        }
+        else
+        {
+            BTSerial.println("❌ Помилка вибору каналу");
         }
     }
 }
+
 
 void TestLineSensors(bool isFirst)
 {
     // maybe after detecting a white line, delay cuz its tweaking
     if (isFirst)
     {
-        // for(int i = 0; i < 5; i++)
-        // {
-        //     bool sensor1 = digitalRead(lineSensor1);
-        //     SerialUSB.print("sensor 1 value: ");
-        //     SerialUSB.println(sensor1);
-        //     //delay(1000);
-        // }
         int sensor1 = digitalRead(lineSensor1);
         SerialUSB.print("sensor 1 value: ");
         SerialUSB.println(sensor1);
         if (sensor1 == 1)
         {
-            SerialUSB.println("WWWW");
+            SerialUSB.println("1");
         }
     }
     else
@@ -236,28 +237,13 @@ void setup()
     BTSerial.begin(9600);
     BTSerial.println("setting up...");
 
-    Wire.begin(PB7, PB6); // SDA, SCL
-    Wire.setClock(100000);
+    Wire.begin(); // SDA, SCL
+    Wire.setClock(400000);
 
     InitSensors();
 }
 void loop()
 {
-    //BTSerial.println("looping...");
-    //delay(100);
-    // buttonState = digitalRead(buttonPin);
-    // if (buttonState == LOW && lastButtonState == HIGH)
-    // {
-    //     delay(50);
-    //     SerialUSB.println("Re-initializing sensors...");
-    //     Wire.end();
-    //     delay(100);
-    //     Wire.begin();
-    //     Wire.setClock(400000);
-    //     InitSensors();
-    //     // delay(1000);
-    // }
-    // lastButtonState = buttonState;
     // test motors code
     //  if(timesRan < 5)
     //  {
@@ -270,5 +256,5 @@ void loop()
 
     // test enemy sensors
     //TestSensors();
+    //delay(500);
 }
-// make program start on button click, if button is clicked while code is running, switch to the next mode, if it is held for 2 second, stop

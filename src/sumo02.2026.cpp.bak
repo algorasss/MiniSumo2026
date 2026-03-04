@@ -35,61 +35,12 @@ uint16_t distances[NUM_SENSORS]; // start from 1 not 0
 bool sensorStatus[NUM_SENSORS];
 
 
-void moveForward()
+void Motors(int leftForward, int leftBackward, int rightForward, int rightBackward)
 {
-  analogWrite(motorA1, motorSpeed);
-  analogWrite(motorA2, 0);
-  analogWrite(motorB1, motorSpeed);
-  analogWrite(motorB2, 0);
-}
-void speedUp()
-{
-  analogWrite(motorA1, SpeedUP); // Швидкість на мотор 1
-  analogWrite(motorA2, 0);       // Відключення протилежного напрямку на моторі 1
-  analogWrite(motorB1, SpeedUP); // Швидкість на мотор 2
-  analogWrite(motorB2, 0);       // Відключення протилежного напрямку на моторі 2
-}
-void stopMotors()
-{
-  analogWrite(motorA1, 0); // Зупинка мотора 1
-  analogWrite(motorA2, 0); // Зупинка мотора 1
-  analogWrite(motorB1, 0); // Зупинка мотора 2
-  analogWrite(motorB2, 0); // Зупинка мотора 2
-}
-void attack()
-{
-  analogWrite(motorA1, attackSpeed); // Швидкість на мотор 1
-  analogWrite(motorA2, 0);           // Відключення протилежного напрямку на моторі 1
-  analogWrite(motorB1, attackSpeed); // Швидкість на мотор 2
-  analogWrite(motorB2, 0);           // Відключення протилежного напрямку на моторі 2
-}
-void rotate()
-{
-  analogWrite(motorA1, 0);             // Відключення протилежного напрямку на моторі 1
-  analogWrite(motorA2, motorSpeedrot); // Швидкість на мотор 1
-  analogWrite(motorB1, motorSpeedrot); // Швидкість на мотор 2
-  analogWrite(motorB2, 0);             // Відключення протилежного напрямку на моторі 2
-}
-void rotateR()
-{
-  analogWrite(motorA1, 0);           // Відключення протилежного напрямку на моторі 1
-  analogWrite(motorA2, speedRotate); // Швидкість на мотор 1
-  analogWrite(motorB1, speedRotate); // Швидкість на мотор 2
-  analogWrite(motorB2, 0);           // Відключення протилежного напрямку на моторі 2
-}
-void rotateL()
-{
-  analogWrite(motorA1, speedRotate); // Швидкість на мотор 1
-  analogWrite(motorA2, 0);           // Відключення протилежного напрямку на моторі 1
-  analogWrite(motorB1, 0);           // Відключення протилежного напрямку на моторі 2
-  analogWrite(motorB2, speedRotate); // Швидкість на мотор 2
-}
-void moveBackward()
-{
-  analogWrite(motorA1, 0);              // Відключення напрямку вперед на моторі 1
-  analogWrite(motorA2, motorSpeedback); // Швидкість на мотор 1
-  analogWrite(motorB1, 0);              // Відключення напрямку вперед на моторі 2
-  analogWrite(motorB2, motorSpeedback); // Швидкість на мотор 2
+    analogWrite(motorA1, leftForward);
+    analogWrite(motorA2, leftBackward);
+    analogWrite(motorB1, rightForward);
+    analogWrite(motorB2, rightBackward);
 }
 
 void printAddress(uint8_t address)
@@ -167,7 +118,7 @@ void loop()
     {
       Serial.println("STOP");
       isProgramRunning = false; // stopping the program
-      stopMotors();
+      Motors(0,0,0,0);
     }
   }
   lastButtonState = buttonState;
@@ -188,6 +139,14 @@ void loop()
 
     TODO think about logic, like if the car is in the left of the ring and cant see the enemy, rotate to right since its mora probable that the enemy is
     in the remaining part of ring, stuff like that.
+
+    Всегда в приоритете проверка линии, если попадает на линию, сдать назад и развернуться на 120
+    Поиск врага, ездить по кругу на 70% скорости
+    Враг спереди - ехать вперед на 100% скорости
+    Враг спереди справа или слева - ехать в его сторону по дуге в него
+    Враг сбоку - по большой дуге удариться в него
+
+    Если враг долго спереди близко, то отьехать назад и удариться в него опять
     */
 
 
