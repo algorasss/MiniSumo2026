@@ -117,17 +117,26 @@ void TestSensors()
 
         if (measure.RangeStatus == 0)
         {
-            distances[channel] = measure.RangeMilliMeter;
-            BTSerial.print("Distance on sensor ");
-            BTSerial.print(channel);
-            BTSerial.print(": ");
-            BTSerial.println(measure.RangeMilliMeter);
+            if (measure.RangeMilliMeter == 0)
+            {
+                distances[channel] = 1000; // if the sensor cant see, set distance to 1000 instead of 0
+                BTSerial.print("Range is 0 on channel ");
+                BTSerial.println(channel);
+            }
+            else
+            {
+                distances[channel] = measure.RangeMilliMeter;
+                BTSerial.print("Distance on sensor ");
+                BTSerial.print(channel);
+                BTSerial.print(": ");
+                BTSerial.println(measure.RangeMilliMeter);
+            }
         }
         else
         {
             distances[channel] = 1000;
-            BTSerial.print("Sensor error ");
-            BTSerial.println(measure.RangeStatus);
+            BTSerial.print("No valid measurement on sensor ");
+            BTSerial.println(channel);
         }
     }
 }
@@ -192,7 +201,38 @@ void InitSensors()
         }
     }
 }
+void MainInitSensors()
+{
+    for (uint8_t channel = 0; channel < NUM_SENSORS; channel++) // checking sensors on all channels of the multiplexer
+    {
+        BTSerial.print("scanning sensor on channel ");
+        BTSerial.print(channel);
+        BTSerial.println("... ");
+        bool isChannelSelected = (tca.selectChannel(channel) == 0);
 
+        if (isChannelSelected) // channel selected successfully
+        {
+            BTSerial.println("OK channel selected");
+            if (sensor.begin())
+            {
+                BTSerial.println("OK sensor found");
+                sensor.configSensor(Adafruit_VL53L0X::VL53L0X_SENSE_HIGH_SPEED);
+                VL53L0X_RangingMeasurementData_t measure;
+                sensor.rangingTest(&measure, false);
+                BTSerial.print("Distance on sensor ");
+                BTSerial.print(channel);
+                BTSerial.print(": ");
+                BTSerial.println(measure.RangeMilliMeter);
+            }
+            else
+            {
+                BTSerial.println("ERROR finding sensor");
+            }
+        }
+        else
+            BTSerial.println("ERROR selecting channel");
+    }
+}
 
 void TestLineSensors(bool isFirst)
 {
@@ -239,7 +279,7 @@ void setup()
     Wire.begin(); // SDA, SCL
     Wire.setClock(400000);
 
-    InitSensors();
+    MainInitSensors();
 }
 void loop()
 {
@@ -251,7 +291,8 @@ void loop()
     //  }
 
     // test line sensors
-    // TestLineSensors(false); //line sensor
+    // TestLineSensors(false); // false tests sensor 2, true tests sensor 1
+    // delay(50);
 
     // test enemy sensors
     //TestSensors();
