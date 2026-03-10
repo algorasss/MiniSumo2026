@@ -9,7 +9,7 @@ Adafruit_VL53L0X sensor = Adafruit_VL53L0X();
 
 const uint8_t NUM_SENSORS = 4; // we have 4 sensors
 
-const int motorA1 = PB13; // пін для правого мотора вперед
+const int motorL1 = PB13; // пін для правого мотора вперед
 const int motorA2 = PB14; // пін для правого мотора назад
 const int motorB1 = PA6;  // пін для лівого мотора вперед
 const int motorB2 = PA5;  // пін для лівого мотора назад
@@ -36,20 +36,20 @@ void printAddress(uint8_t address)  {
 
 void StopMotors()
 {
-    analogWrite(motorA1, 0);
+    analogWrite(motorL1, 0);
     analogWrite(motorA2, 0);
     analogWrite(motorB1, 0);
     analogWrite(motorB2, 0);
 }
 void TestMotor()
 {
-    analogWrite(motorA1, 100);
+    analogWrite(motorL1, 100);
     analogWrite(motorA2, 0);
     delay(1000);
-    analogWrite(motorA1, 150);
+    analogWrite(motorL1, 150);
     analogWrite(motorA2, 0);
     delay(1000);
-    analogWrite(motorA1, 190);
+    analogWrite(motorL1, 190);
     analogWrite(motorA2, 0);
     BTSerial.println("fast right forward");
 
@@ -57,13 +57,13 @@ void TestMotor()
     StopMotors();
     delay(1000);
 
-    analogWrite(motorA1, 0);
+    analogWrite(motorL1, 0);
     analogWrite(motorA2, 100);
     delay(1000);
-    analogWrite(motorA1, 0);
+    analogWrite(motorL1, 0);
     analogWrite(motorA2, 150);
     delay(1000);
-    analogWrite(motorA1, 0);
+    analogWrite(motorL1, 0);
     analogWrite(motorA2, 190);
     BTSerial.println("fast right backward");
 
@@ -223,7 +223,7 @@ void TestLineSensors(bool isFirst)
 
 void setup()
 {
-    pinMode(motorA1, OUTPUT);
+    pinMode(motorL1, OUTPUT);
     pinMode(motorA2, OUTPUT);
     pinMode(motorB1, OUTPUT);
     pinMode(motorB2, OUTPUT);
